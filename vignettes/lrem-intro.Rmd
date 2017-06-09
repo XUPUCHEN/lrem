@@ -1,0 +1,122 @@
+---
+title: "To use lrem package"
+author: "Zipson XU"
+date: '`r format(Sys.time(), "%d, %m, %Y")`'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+
+---
+This package is solving linear rational expectation models, using the function "lre_auto", which contains two functions: lre_auto_bk, introduced by Blanchard and Kahn(1980), and lre_auto_klein, introduced by Klein(2000).
+
+## Examples
+
+```{r, cache = FALSE, include = FALSE}
+source("F:/ecomovement/lrem/R/lrem.R")
+```
+
+1, For the Blanchard and Kahn(1980) system as following:
+$$
+x_{t+1} = Ax_t
+\Leftrightarrow
+\begin{bmatrix}
+  x_{t+1}^1 \\
+  x_{t+1}^2
+\end{bmatrix}
+=
+\begin{bmatrix}
+  A_{11} & A_{12} \\
+  A_{21} & A_{22}
+\end{bmatrix}
+\begin{bmatrix}
+  x_{t}^1 \\
+  x_{t}^2
+\end{bmatrix},
+$$
+We can define:
+```{r, }
+A <- matrix(c( 0.7000000, 0.000000, 1.2000000, 0.6363636, 1.909091, 0.1818182, 0.0000000, -1.000000, 1.0000000 ), byrow = TRUE, nrow = 3)
+x0 <- 0.1
+```
+As there is no E in this system, we can use the function as following:
+```{r, }
+lre_auto (A, ,x0)
+```
+Then we define g and h as following, accroding to the system:
+\begin{align}
+  x_t^2 &= g(x_t^1) \\
+  x_{t+1}^1 &= h(x_t^1, x_t^2) = h(x_t). 
+\end{align}
+
+Therefore
+```{r, }
+g <- lre_auto (A, ,x0)$g
+h <- lre_auto (A, ,x0)$h
+```
+and we set t=100
+```{r, }
+t <- 100
+```
+
+Here we can do the simulation:
+```{r,}
+simulate <- function(g, h, x0, t) {
+n1 <- length(x0)  
+n2 <- length(g(x0)) 
+pre <- 1:n1 
+npr <- (n1 + 1):(n1 + n2)
+out <- matrix(0, t, n1 + n2)
+out[1, pre] <- x0  
+out[1, npr] <- g(x0) 
+for (i in 1:(t - 1)) 
+{ out[i + 1, pre] <- h(out[i, pre]) 
+out[i + 1, npr] <- g(out[i + 1, pre]) } 
+out
+}
+
+simulate(g, h, x0, t)
+out<-simulate(g, h, x0, t)
+plot(out[, 1])
+```
+
+2, For the Klein(2000) case:
+We use the matrix A and B in "http://www.nag.com/lapack-ex/node119.html" as A and E
+
+```{r,}
+A <- QZ::exAB2$A
+E <- QZ::exAB2$B
+ret <- QZ::qz(A, E)
+abs(ret$ALPHA / ret$BETA)
+ord <- abs(ret$ALPHA / ret$BETA) <= 1
+ret2 <- QZ::qz.dtgsen(ret$S, ret$T, ret$Q, ret$Z, select = ord)
+abs(ret2$ALPHA / ret2$BETA)
+```
+
+Therefore, we define
+```{r, }
+g <- lre_auto (A,E,x0)$g
+h <- lre_auto (A,E,x0)$h
+```
+
+Then the simulation result becoms:
+```{r,}
+simulate <- function(g, h, x0, t) {
+n1 <- length(x0)  
+n2 <- length(g(x0)) 
+pre <- 1:n1 
+npr <- (n1 + 1):(n1 + n2)
+out <- matrix(0, t, n1 + n2)
+out[1, pre] <- x0  
+out[1, npr] <- g(x0) 
+for (i in 1:(t - 1)) 
+{ out[i + 1, pre] <- h(out[i, pre]) 
+out[i + 1, npr] <- g(out[i + 1, pre]) } 
+out
+}
+
+simulate(g, h, x0, t)
+out<-simulate(g, h, x0, t)
+plot(out[, 1])
+```
